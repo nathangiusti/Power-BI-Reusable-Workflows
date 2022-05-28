@@ -1,0 +1,84 @@
+on:
+  workflow_call:
+    inputs:
+      tenant_id:
+        type: string
+        description: 'Tenant ID of your Power BI instance'
+        required: true
+      config_file:
+        type: string
+        description: 'Location of config file'
+        required: false
+        default: "."
+      db_url:
+        type: string
+        description: 'The url to deploy the dataset to'
+        required: false
+        default: "."
+      te_url:
+        type: string
+        description: 'The url to download TE portable from'
+        required: false
+        default: "."
+      folder:
+        type: string
+        description: 'The folder containing the datasets'
+        required: false
+        default: "."
+      deploy_roles:
+        type: boolean
+        description: 'True to deploy roles'
+        required: false
+        default: false
+      deploy_partitions:
+        type: boolean
+        description: 'True to deploy roles'
+        required: false
+        default: false
+      separator:
+        type: string
+        description: 'Character used to separate file names in files argument'
+        required: false
+        default: ","
+      since_last_remote_commit:
+        type: boolean
+        description: 'Use the last commit on the remote branch as the base_sha'
+        required: false
+        default: false
+    secrets:
+      client_id:
+        description: 'Service account client id'
+        required: true
+      client_secret:
+        description: 'Service account client secret'
+        required: true
+
+jobs:
+  Deploy-Asset:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v19
+        with:
+          separator: ${{ inputs.separator }}
+          quotepath: false
+          since_last_remote_commit: ${{ inputs.since_last_remote_commit }}
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+          pip install PyYAML
+      - name: execute py script
+        run: |
+          python ./.github/workflows/scripts/te_deploy.py --partitions "${{inputs.deploy_partitions}}" --roles "${{inputs.deploy_roles}}" --tenant_id "${{ inputs.tenant_id }}" --config "${{ inputs.config_file }}" --folder "${{ inputs.folder }}" --db_url "${{ inputs.db_url }}" --te_url "${{ inputs.te_url }}" --files "${{ steps.changed-files.outputs.all_changed_files }}" --separator "${{ inputs.separator }}"
+        env:
+          CLIENT_ID: ${{ secrets.client_id }}
+          CLIENT_SECRET: ${{ secrets.client_secret }}

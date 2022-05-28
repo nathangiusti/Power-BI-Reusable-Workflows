@@ -1,0 +1,64 @@
+on:
+  workflow_call:
+    inputs:
+      config_file:
+        type: string
+        description: 'Location of config file'
+        required: true
+      tenant_id:
+        type: string
+        description: 'Tenant ID of your Power BI instance'
+        required: true
+      source_stage_order:
+        type: number
+        description: 'Which stage to deploy from. 0 to deploy dev to test. 1 to deploy test to prod'
+        required: true
+      update_app_in_target_workspace:
+        type: boolean
+        description: 'True to update app in target workspace after deploy.'
+        required: false
+        default: false
+      allow_purge_data:
+        type: boolean
+        description: 'Whether to delete all data from the target Power BI item (such as a report or a dashboard) when there is a schema mismatch. If this option is not set to true when it is required for deployment, the deployment will fail.'
+        required: false
+        default: false
+      separator:
+        type: string
+        description: 'Character used to separate file names in files argument'
+        required: false
+        default: ","
+    secrets:
+        client_id:
+            description: 'Service account client id'
+            required: true
+        client_secret:
+            description: 'Service account client secret'
+            required: true
+
+jobs:
+  Deploy-Asset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v19
+        with:
+          separator: ","
+          quotepath: false
+      - name: Power BI Pipeline Deploy
+        uses: nathangiusti/Power-BI-Pipeline-Deploy@v2.4
+        with:
+          files: ${{ steps.changed-files.outputs.all_modified_files }}
+          config_file: ${{ inputs.config_file }}
+          separator: ${{ inputs.separator }}
+          tenant_id: ${{ inputs.tenant_id }}
+          source_stage_order: ${{ inputs.source_stage_order }}
+          update_app_in_target_workspace: ${{ inputs.update_app_in_target_workspace }}
+          allow_purge_data: ${{ inputs.allow_purge_data }}
+        env:
+          CLIENT_ID: ${{ secrets.client_id }}
+          CLIENT_SECRET: ${{ secrets.client_secret }}

@@ -1,0 +1,47 @@
+on:
+  workflow_call:
+    inputs:
+      config_file:
+        type: string
+        description: 'Location of config file'
+        required: true
+      tenant_id:
+        type: string
+        description: 'Tenant ID of your Power BI instance'
+        required: true
+      separator:
+        type: string
+        description: 'Character used to separate file names in files argument'
+        required: false
+        default: ","
+    secrets:
+        client_id:
+            description: 'Service account client id'
+            required: true
+        client_secret:
+            description: 'Service account client secret'
+            required: true
+
+jobs:
+  Deploy-Asset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v19
+        with:
+          separator: ","
+          quotepath: false
+      - name: Power BI Workspace Deploy
+        uses: nathangiusti/Power-BI-Workspace-Deploy@v1.2
+        with:
+          files: ${{ steps.changed-files.outputs.all_modified_files }}
+          config_file: ${{ inputs.config_file }}
+          separator: ${{ inputs.separator }}
+          tenant_id: ${{ inputs.tenant_id }}
+        env:
+          CLIENT_ID: ${{ secrets.client_id }}
+          CLIENT_SECRET: ${{ secrets.client_secret }}

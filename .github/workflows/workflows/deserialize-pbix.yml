@@ -1,0 +1,36 @@
+on:
+  workflow_call:
+    inputs:
+      commit_message:
+        type: string
+        description: 'Commit message made by action to add json files to source control'
+        required: false
+        default: 'Deserialize PBIX files'
+      separator:
+        type: string
+        description: 'Character used to separate file names in files argument'
+        required: false
+        default: ","
+
+jobs:
+  Reformat-Power-BI-Assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v19
+        with:
+          separator: ${{ inputs.separator }}
+          quotepath: false
+      - name: Deserialize PBIX
+        uses: nathangiusti/Power-BI-VC-Utils@v2.5
+        with:
+          files: ${{ steps.changed-files.outputs.all_modified_files }}
+          separator: ${{ inputs.separator }}
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: ${{ inputs.commit_message }}
+          file_pattern: "*.json"
