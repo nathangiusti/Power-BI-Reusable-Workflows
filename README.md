@@ -2,6 +2,8 @@
 
 This repository contains reusable workflows in order to set up DevOps for Power BI
 
+For a quickstart/example of the use of these workflows check out [Power-BI-Sample-VC-Repo](https://github.com/nathangiusti/Power-BI-Sample-VC-Repo). 
+
 # Available Workflows:
 
 ## [Deserialize PBIX](.github/workflows/deserialize-pbix.yml)
