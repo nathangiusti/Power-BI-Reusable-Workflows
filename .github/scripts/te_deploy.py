@@ -36,6 +36,7 @@ def find_updated_datasets(file_list, folder, cfg):
 
     parsed_file_list = []
     for file in file_list:
+        file = file.strip()
         path = Path(file)
         # Ignore deleted files
         if os.path.exists(file) and len(path.parts) != 0 and file.endswith(".json") and not file.startswith("."):
@@ -44,9 +45,20 @@ def find_updated_datasets(file_list, folder, cfg):
                     parsed_file_list.append(file[len(folder):])
             else:
                 parsed_file_list.append(file)
+        else:
+            reason = ""
+            if not os.path.exists(file):
+                reason += " Does Not Exist | "
+            if len(path.parts) == 0:
+                reason += " Path too short | "
+            if not file.endswith(".json"):
+                reason += " Not a .json file | "
+            if file.startswith("."):
+                reason += " File starts with '.' | "
+            print(f"{file} skipped because: {reason}")
 
     for file in parsed_file_list:
-        path = Path(file)
+        path = Path(file.strip("/"))
         # If we have a config, create a map from dataset to folder
         if cfg:
             dataset = path.parts[1]
@@ -68,11 +80,15 @@ def main():
     db_url = args.db_url if args.db_url and len(args.db_url) > 1 else None
     config = args.config if args.config and len(args.config) > 1 else None
     te_url = args.te_url if args.te_url and len(args.te_url) > 1 else "https://cdn.tabulareditor.com/files/te2/TabularEditor.Portable.zip"
-    files = args.files[0]
+
     folder = args.folder if args.folder and len(args.folder) > 1 else ""
     deploy_partition = args.partitions[0]
     deploy_roles = args.roles[0]
-    file_list = files.split(args.separator[0])
+    changed_files_list = args.files[0]
+    with open(changed_files_list) as f:
+        file_names = f.read()
+    file_list = file_names.split(args.separator[0])
+    
     client_id = os.environ['CLIENT_ID']
     client_secret = os.environ['CLIENT_SECRET']
 
@@ -90,6 +106,9 @@ def main():
 
     updated_datasets = find_updated_datasets(file_list, folder, cfg)
 
+    if not updated_datasets:
+        print("WARNING: No datasets found. Nothing will be deployed")
+        
     # If we need to deploy datasets, download TE
     if updated_datasets:
         download_te("\\TabularEditor.zip", te_url)
@@ -101,7 +120,7 @@ def main():
             deploy_url = db_url
         else:
             deploy_url = cfg[workspace_name]
-        dataset_loc = folder + workspace_name + "/" + dataset
+        dataset_loc = (folder + "/" + workspace_name + "/" + dataset).strip("/")
         run_str = "TabularEditor.exe \"{}\" -D \"Provider=MSOLAP;Data Source={};User ID=app:{}@{};Password={}\" \"{}\" -O -C -G -E -W".format(dataset_loc, deploy_url, client_id, tenant_id, client_secret, dataset)
         if deploy_partition:
             run_str = run_str + " -P"
